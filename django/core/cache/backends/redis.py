@@ -78,10 +78,15 @@ class RedisCacheClient:
                 **parse_url(self._servers[index]),
             }:
                 return self._pools[index]
-        self._pools[index] = self._pool_class.from_url(
+        
+        # setdefault() ensures that multiple threads don't set this in
+        # parallel. Since we do not open the pool during it's init above,
+        # this means that at worst during startup multiple threads generate
+        # pool objects and the first to set it wins.
+        self._pools.setdefault(index, self._pool_class.from_url(
             self._servers[index],
             **self._pool_options,
-        )
+        ))
         return self._pools[index]
 
     def get_client(self, key=None, *, write=False):
